@@ -72,6 +72,7 @@ def main(argv=None):
                     print(f"Would set extinfo for image {img.getName()}({img.getId()}) to {path}")
                 else:
                     set_ext_info(conn, img, path)
+                    print(f"Set extinfo for image {img.getName()}({img.getId()}) to {path}")
             else:
                 print(f"Could not resolve {path} for image {img.getName()}({img.getId()})")
 
