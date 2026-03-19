@@ -8,6 +8,8 @@ from omero.rtypes import rstring, rlong
 
 DRY_RUN = True
 
+plate_cache = dict()
+
 def get_images(conn, container_id, is_screen=False):
     if is_screen:
         screen = conn.getObject('Screen', attributes={'id': container_id})
@@ -18,17 +20,21 @@ def get_images(conn, container_id, is_screen=False):
                 well_pos = f"{well_pos[0]}/{well_pos[1:]}"
                 for index in range(0, index):
                     pos = f"{well_pos}/{index}"
-                    yield pos, well.getImage(index)
+                    yield plate.getName(), pos, well.getImage(index)
     else:
         project = conn.getObject('Project', attributes={'id': container_id})
         for dataset in project.listChildren():
             for image in dataset.listChildren():
-                yield "", image
+                yield dataset, "", image
 
 
-def get_filepaths_info(img):
+def get_filepaths_info(img, parent):
+    if parent and parent in plate_cache:
+        return plate_cache[parent]
     path = img.getImportedImageFilePaths()["client_paths"][0]
     base, _ = path.rsplit("/", 1)
+    if parent:
+        plate_cache[parent] = base
     return base
 
 
@@ -61,8 +67,8 @@ def main(argv=None):
     is_screen = container.lower() == "screen"
     with cli_login() as c:
         conn = BlitzGateway(client_obj=c.get_client())
-        for pos, img in get_images(conn, container_id, is_screen=is_screen):
-            path = get_filepaths_info(img)
+        for parent, pos, img in get_images(conn, container_id, is_screen=is_screen):
+            path = get_filepaths_info(img, parent)
             if is_screen:
                 path = f"{path}/{pos}"
             else:
